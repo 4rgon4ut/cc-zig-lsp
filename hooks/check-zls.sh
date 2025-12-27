@@ -67,6 +67,35 @@ is_zls_installed() {
 }
 
 # ─────────────────────────────────────────────────────────────
+# Verify SHA256 checksum
+# ─────────────────────────────────────────────────────────────
+verify_checksum() {
+    local file="$1"
+    local expected_hash="$2"
+    local actual_hash
+
+    # Use shasum on macOS, sha256sum on Linux
+    if command -v shasum &>/dev/null; then
+        actual_hash=$(shasum -a 256 "${file}" | awk '{print $1}')
+    elif command -v sha256sum &>/dev/null; then
+        actual_hash=$(sha256sum "${file}" | awk '{print $1}')
+    else
+        echo "Warning: No SHA256 tool found, skipping verification"
+        return 0
+    fi
+
+    if [[ "${actual_hash}" == "${expected_hash}" ]]; then
+        echo "Checksum verified: ${actual_hash:0:16}..."
+        return 0
+    else
+        echo "Checksum FAILED!"
+        echo "  Expected: ${expected_hash}"
+        echo "  Got:      ${actual_hash}"
+        return 1
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────
 # Download and install ZLS for a specific version
 # ─────────────────────────────────────────────────────────────
 install_zls() {
@@ -96,7 +125,10 @@ install_zls() {
     esac
 
     local archive_name="zls-${arch}-${platform}.tar.xz"
-    local download_url="https://github.com/zigtools/zls/releases/download/${version}/${archive_name}"
+    local checksum_name="${archive_name}.sha256"
+    local base_url="https://github.com/zigtools/zls/releases/download/${version}"
+    local download_url="${base_url}/${archive_name}"
+    local checksum_url="${base_url}/${checksum_name}"
     local install_dir="${ZLS_BASE_DIR}/${version}"
 
     echo "Downloading ZLS ${version} for ${platform}-${arch}..."
@@ -107,16 +139,30 @@ install_zls() {
     temp_dir=$(mktemp -d)
     trap 'rm -rf "${temp_dir}"' RETURN
 
-    if curl -fsSL "${download_url}" -o "${temp_dir}/${archive_name}"; then
-        tar -xf "${temp_dir}/${archive_name}" -C "${temp_dir}"
-        mv "${temp_dir}/zls" "${install_dir}/zls"
-        chmod +x "${install_dir}/zls"
-        echo "ZLS ${version} installed to ${install_dir}"
-        return 0
-    else
+    # Download archive
+    if ! curl -fsSL "${download_url}" -o "${temp_dir}/${archive_name}"; then
         echo "Download failed for ZLS ${version}"
         return 1
     fi
+
+    # Download and verify checksum
+    local expected_hash
+    if curl -fsSL "${checksum_url}" -o "${temp_dir}/${checksum_name}" 2>/dev/null; then
+        expected_hash=$(awk '{print $1}' "${temp_dir}/${checksum_name}")
+        if ! verify_checksum "${temp_dir}/${archive_name}" "${expected_hash}"; then
+            echo "Security: Refusing to install - checksum mismatch"
+            return 1
+        fi
+    else
+        echo "Warning: Checksum file not available, proceeding without verification"
+    fi
+
+    # Extract and install
+    tar -xf "${temp_dir}/${archive_name}" -C "${temp_dir}"
+    mv "${temp_dir}/zls" "${install_dir}/zls"
+    chmod +x "${install_dir}/zls"
+    echo "ZLS ${version} installed to ${install_dir}"
+    return 0
 }
 
 # ─────────────────────────────────────────────────────────────
