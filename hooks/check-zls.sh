@@ -5,6 +5,17 @@ set -e
 ZLS_BASE_DIR="${HOME}/.local/share/zls"
 ZLS_BIN_DIR="${HOME}/.local/bin"
 
+# ANSI color codes (disabled if not a terminal)
+if [[ -t 2 ]]; then
+    RED='\033[0;31m'
+    BOLD='\033[1m'
+    RESET='\033[0m'
+else
+    RED=''
+    BOLD=''
+    RESET=''
+fi
+
 # ─────────────────────────────────────────────────────────────
 # Detect Zig version (project-aware)
 # Priority: build.zig.zon → .zigversion → global zig
@@ -88,9 +99,10 @@ verify_checksum() {
         echo "Checksum verified: ${actual_hash:0:16}..."
         return 0
     else
-        echo "Checksum FAILED!"
-        echo "  Expected: ${expected_hash}"
-        echo "  Got:      ${actual_hash}"
+        echo -e "${RED}${BOLD}[SECURITY] CHECKSUM VERIFICATION FAILED${RESET}" >&2
+        echo -e "${RED}  Expected: ${expected_hash}${RESET}" >&2
+        echo -e "${RED}  Got:      ${actual_hash}${RESET}" >&2
+        echo -e "${RED}  File may be corrupted or tampered with.${RESET}" >&2
         return 1
     fi
 }
@@ -150,7 +162,9 @@ install_zls() {
     if curl -fsSL "${checksum_url}" -o "${temp_dir}/${checksum_name}" 2>/dev/null; then
         expected_hash=$(awk '{print $1}' "${temp_dir}/${checksum_name}")
         if ! verify_checksum "${temp_dir}/${archive_name}" "${expected_hash}"; then
-            echo "Security: Refusing to install - checksum mismatch"
+            echo -e "${RED}${BOLD}[SECURITY] REFUSING TO INSTALL - CHECKSUM MISMATCH${RESET}" >&2
+            echo -e "${RED}Download may have been intercepted or corrupted.${RESET}" >&2
+            echo -e "${RED}If this persists, verify your network connection and try again.${RESET}" >&2
             return 1
         fi
     else
