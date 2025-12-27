@@ -7,7 +7,7 @@ Zig LSP plugin for [Claude Code](https://claude.ai/code). Integrates [ZLS](https
 - **Auto-install**: Downloads ZLS automatically if not present
 - **Project-aware**: Matches ZLS version to your project's Zig version
 - **Multi-version**: Caches multiple ZLS versions for different projects
-- **Secure**: SHA256 checksum verification on downloads
+- **Secure**: [SHA256 checksum verification](https://github.com/pr0x1m4/cc-zig-lsp/blob/main/hooks/check-zls.sh#L72-L96) on downloads
 
 ## Installation
 
