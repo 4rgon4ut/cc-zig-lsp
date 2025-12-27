@@ -1,0 +1,14 @@
+{
+  "zig": {
+    "command": "zls",
+    "extensionToLanguage": {
+      ".zig": "zig",
+      ".zon": "zig"
+    },
+    "initializationOptions": {
+      "enable_snippets": true,
+      "enable_import_analysis": true
+    },
+    "maxRestarts": 3
+  }
+}

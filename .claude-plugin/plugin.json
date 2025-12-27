@@ -1,0 +1,12 @@
+{
+  "name": "zig-lsp",
+  "description": "Zig language support via ZLS (auto-installs)",
+  "version": "1.0.0",
+  "author": {
+    "name": "pr0x1m4"
+  },
+  "repository": "https://github.com/pr0x1m4/cc-zig-lsp",
+  "keywords": ["zig", "lsp", "zls", "language-server"],
+  "hooks": "./hooks/hooks.json",
+  "lspServers": "../.lsp.json"
+}
