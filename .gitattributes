@@ -1,0 +1,6 @@
+# Exclude from release archives
+.github/         export-ignore
+.prompts/        export-ignore
+docs/            export-ignore
+AGENTS.md        export-ignore
+.gitattributes   export-ignore
