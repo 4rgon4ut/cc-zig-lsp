@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating .lsp.json..."
+          jq . .lsp.json > /dev/null
+
+          echo "Validating plugin.json..."
+          jq . .claude-plugin/plugin.json > /dev/null
+
+          echo "Validating hooks.json..."
+          jq . hooks/hooks.json > /dev/null
+
+          echo "All JSON files valid"
+
+      - name: Validate required LSP fields
+        run: |
+          jq -e '.zig.command' .lsp.json > /dev/null
+          jq -e '.zig.extensionToLanguage' .lsp.json > /dev/null
+          echo "Required LSP fields present"
+
+      - name: Lint shell scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './hooks'
+
+  test-script:
+    name: Test Install Script
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test version detection (no zig)
+        run: |
+          # Should fail gracefully when no zig installed
+          cd /tmp
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 || true
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Test version detection (with zig)
+        run: |
+          zig version
+          # Create temp project dir
+          mkdir -p /tmp/test-project
+          cd /tmp/test-project
+
+          # Test global zig detection
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 | tee output.log
+
+          # Verify ZLS was installed
+          test -f ~/.local/share/zls/0.13.0/zls || exit 1
+          echo "ZLS installed successfully"
+
+      - name: Test .zigversion detection
+        run: |
+          mkdir -p /tmp/zigversion-test
+          cd /tmp/zigversion-test
+          echo "0.13.0" > .zigversion
+
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 | grep -q "0.13.0"
+          echo ".zigversion detection works"
+
+      - name: Test build.zig.zon detection
+        run: |
+          mkdir -p /tmp/zon-test
+          cd /tmp/zon-test
+          cat > build.zig.zon << 'EOF'
+          .{
+              .name = "test",
+              .version = "0.0.1",
+              .minimum_zig_version = "0.13.0",
+          }
+          EOF
+
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 | grep -q "0.13.0"
+          echo "build.zig.zon detection works"
