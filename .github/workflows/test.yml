@@ -1,0 +1,53 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  install-script:
+    name: Install Script
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test without Zig (should fail gracefully)
+        run: |
+          cd /tmp
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 || true
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Test global version detection
+        run: |
+          zig version
+          mkdir -p /tmp/test-project && cd /tmp/test-project
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 | tee output.log
+          test -f ~/.local/share/zls/0.13.0/zls
+
+      - name: Test .zigversion detection
+        run: |
+          mkdir -p /tmp/zigversion-test && cd /tmp/zigversion-test
+          echo "0.13.0" > .zigversion
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 | grep -q "0.13.0"
+
+      - name: Test build.zig.zon detection
+        run: |
+          mkdir -p /tmp/zon-test && cd /tmp/zon-test
+          cat > build.zig.zon << 'EOF'
+          .{
+              .name = "test",
+              .version = "0.0.1",
+              .minimum_zig_version = "0.13.0",
+          }
+          EOF
+          bash "${GITHUB_WORKSPACE}/hooks/check-zls.sh" 2>&1 | grep -q "0.13.0"

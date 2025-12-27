@@ -1,0 +1,36 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-json:
+    name: Validate JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          jq . .lsp.json > /dev/null
+          jq . .claude-plugin/plugin.json > /dev/null
+          jq . hooks/hooks.json > /dev/null
+
+      - name: Check required LSP fields
+        run: |
+          jq -e '.zig.command' .lsp.json > /dev/null
+          jq -e '.zig.extensionToLanguage' .lsp.json > /dev/null
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './hooks'
