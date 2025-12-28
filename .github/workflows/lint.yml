@@ -15,15 +15,15 @@ jobs:
 
       - name: Validate JSON files
         run: |
-          jq . .lsp.json > /dev/null
+          jq . .claude-plugin/lsp.json > /dev/null
           jq . .claude-plugin/plugin.json > /dev/null
           jq . .claude-plugin/marketplace.json > /dev/null
-          jq . hooks/hooks.json > /dev/null
+          jq . .claude-plugin/hooks/hooks.json > /dev/null
 
       - name: Check required LSP fields
         run: |
-          jq -e '.zig.command' .lsp.json > /dev/null
-          jq -e '.zig.extensionToLanguage' .lsp.json > /dev/null
+          jq -e '.zig.command' .claude-plugin/lsp.json > /dev/null
+          jq -e '.zig.extensionToLanguage' .claude-plugin/lsp.json > /dev/null
 
   shellcheck:
     name: ShellCheck
@@ -34,4 +34,4 @@ jobs:
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: './hooks'
+          scandir: './.claude-plugin/hooks'

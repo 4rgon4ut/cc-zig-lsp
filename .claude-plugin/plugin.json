@@ -8,5 +8,5 @@
   "repository": "https://github.com/4rgon4ut/cc-zig-lsp",
   "keywords": ["zig", "lsp", "zls", "language-server"],
   "hooks": "./hooks/hooks.json",
-  "lspServers": "../.lsp.json"
+  "lspServers": "./lsp.json"
 }
