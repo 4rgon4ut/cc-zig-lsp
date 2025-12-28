@@ -19,9 +19,10 @@ Zig LSP plugin for Claude Code. Integrates [ZLS](https://github.com/zigtools/zls
 
 ### Files
 ```
-.claude-plugin/plugin.json   # metadata
-.lsp.json                    # ZLS config
-hooks/check-zls.sh           # binary detection
+.claude-plugin/plugin.json       # metadata (runtime)
+.claude-plugin/marketplace.json  # marketplace registry (keep version in sync!)
+.lsp.json                        # ZLS config
+hooks/check-zls.sh               # binary detection
 ```
 
 ## Implementation

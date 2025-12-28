@@ -17,11 +17,27 @@
 
 ZLS must match Zig version. No bundled binary - user installs.
 
+## Version Sources
+
+**⚠️ MANDATORY: All version sources MUST be kept in sync!**
+
+| File | Purpose |
+|------|---------|
+| `.claude-plugin/plugin.json` | Plugin metadata (runtime) |
+| `.claude-plugin/marketplace.json` | Marketplace registry (discovery) |
+| Git tag | Release reference |
+
+Version mismatch causes marketplace display issues (missing "new" tags, stale versions shown).
+
 ## Release
 
 ```bash
-# bump version in plugin.json
-git commit -m "chore: release v1.x.x"
-git tag v1.x.x
+# 1. Bump version in BOTH files
+#    - .claude-plugin/plugin.json
+#    - .claude-plugin/marketplace.json
+
+# 2. Commit and tag
+git commit -m "chore: release 1.x.x"
+git tag 1.x.x
 git push --tags
 ```
