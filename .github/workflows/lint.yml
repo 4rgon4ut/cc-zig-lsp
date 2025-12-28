@@ -17,6 +17,7 @@ jobs:
         run: |
           jq . .lsp.json > /dev/null
           jq . .claude-plugin/plugin.json > /dev/null
+          jq . .claude-plugin/marketplace.json > /dev/null
           jq . hooks/hooks.json > /dev/null
 
       - name: Check required LSP fields

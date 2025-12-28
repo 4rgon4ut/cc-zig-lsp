@@ -12,7 +12,11 @@ Zig LSP plugin for [Claude Code](https://claude.ai/code). Integrates [ZLS](https
 ## Installation
 
 ```bash
-claude plugin install github:4rgon4ut/cc-zig-lsp
+# Add marketplace (one-time)
+claude plugin marketplace add 4rgon4ut/cc-zig-lsp
+
+# Install plugin
+claude plugin install zig-lsp@cc-zig-lsp
 ```
 
 ## Requirements

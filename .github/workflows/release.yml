@@ -21,6 +21,7 @@ jobs:
         run: |
           jq . .lsp.json > /dev/null
           jq . .claude-plugin/plugin.json > /dev/null
+          jq . .claude-plugin/marketplace.json > /dev/null
           jq . hooks/hooks.json > /dev/null
 
       - name: Lint shell scripts
@@ -54,7 +55,11 @@ jobs:
             ## Installation
 
             ```bash
-            claude plugin install github:4rgon4ut/cc-zig-lsp
+            # Add marketplace (one-time)
+            claude plugin marketplace add 4rgon4ut/cc-zig-lsp
+
+            # Install plugin
+            claude plugin install zig-lsp@cc-zig-lsp
             ```
 
             ## What's Changed
