@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "zig-lsp",
-      "source": ".",
+      "source": "./",
       "description": "Zig language support via ZLS (auto-installs)",
       "version": "0.1.0",
       "keywords": ["zig", "lsp", "zls", "language-server"]
