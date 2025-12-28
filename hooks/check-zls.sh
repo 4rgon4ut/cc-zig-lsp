@@ -108,6 +108,38 @@ verify_checksum() {
 }
 
 # ─────────────────────────────────────────────────────────────
+# Find latest compatible ZLS version for a given Zig major.minor
+# ─────────────────────────────────────────────────────────────
+find_compatible_zls() {
+    local zig_version="$1"
+    local major_minor
+    major_minor=$(echo "${zig_version}" | grep -oE '^[0-9]+\.[0-9]+')
+
+    # First check if exact version exists
+    if curl -sIf "https://github.com/zigtools/zls/releases/tag/${zig_version}" &>/dev/null; then
+        echo "${zig_version}"
+        return 0
+    fi
+
+    # Find highest ZLS release matching major.minor
+    local compatible
+    compatible=$(curl -sL "https://api.github.com/repos/zigtools/zls/releases" | \
+        grep -oE '"tag_name":\s*"[0-9]+\.[0-9]+\.[0-9]+"' | \
+        sed -E 's/.*"([^"]+)".*/\1/' | \
+        grep "^${major_minor}\." | \
+        sort -V | tail -1)
+
+    if [[ -n "${compatible}" ]]; then
+        echo "${compatible}"
+        return 0
+    fi
+
+    # Fallback to latest release
+    curl -sL "https://api.github.com/repos/zigtools/zls/releases/latest" | \
+        grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'
+}
+
+# ─────────────────────────────────────────────────────────────
 # Download and install ZLS for a specific version
 # ─────────────────────────────────────────────────────────────
 install_zls() {
@@ -154,6 +186,7 @@ install_zls() {
     # Download archive
     if ! curl -fsSL "${download_url}" -o "${temp_dir}/${archive_name}"; then
         echo "Download failed for ZLS ${version}"
+        rmdir "${install_dir}" 2>/dev/null || true
         return 1
     fi
 
@@ -206,27 +239,41 @@ main() {
         exit 1
     fi
 
-    echo "Required Zig/ZLS version: ${zig_version}"
+    echo "Detected Zig version: ${zig_version}"
 
     # Handle dev versions - use latest stable ZLS
+    local zls_version
     if [[ "${zig_version}" == *"dev"* ]]; then
         echo "Dev version detected, fetching latest stable ZLS..."
-        zig_version=$(curl -sL "https://api.github.com/repos/zigtools/zls/releases/latest" | \
+        zls_version=$(curl -sL "https://api.github.com/repos/zigtools/zls/releases/latest" | \
                       grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-        echo "Using ZLS version: ${zig_version}"
+    else
+        # Find compatible ZLS version (may differ from exact Zig version)
+        zls_version=$(find_compatible_zls "${zig_version}")
+    fi
+
+    if [[ -z "${zls_version}" ]]; then
+        echo "Error: Could not determine compatible ZLS version"
+        exit 1
+    fi
+
+    if [[ "${zls_version}" != "${zig_version}" ]]; then
+        echo "Using ZLS ${zls_version} (compatible with Zig ${zig_version})"
+    else
+        echo "Using ZLS ${zls_version}"
     fi
 
     # Check if this version is already installed
-    if is_zls_installed "${zig_version}"; then
-        echo "ZLS ${zig_version} already installed"
-        activate_zls "${zig_version}"
+    if is_zls_installed "${zls_version}"; then
+        echo "ZLS ${zls_version} already installed"
+        activate_zls "${zls_version}"
         exit 0
     fi
 
     # Install the required version
-    echo "ZLS ${zig_version} not found. Installing..."
-    if install_zls "${zig_version}"; then
-        activate_zls "${zig_version}"
+    echo "ZLS ${zls_version} not found. Installing..."
+    if install_zls "${zls_version}"; then
+        activate_zls "${zls_version}"
         echo ""
         echo "Ensure ${ZLS_BIN_DIR} is in your PATH"
         exit 0
