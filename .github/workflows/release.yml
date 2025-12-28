@@ -19,15 +19,15 @@ jobs:
 
       - name: Validate JSON files
         run: |
-          jq . .claude-plugin/lsp.json > /dev/null
+          jq . .lsp.json > /dev/null
           jq . .claude-plugin/plugin.json > /dev/null
           jq . .claude-plugin/marketplace.json > /dev/null
-          jq . .claude-plugin/hooks/hooks.json > /dev/null
+          jq . hooks/hooks.json > /dev/null
 
       - name: Lint shell scripts
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: "./.claude-plugin/hooks"
+          scandir: "./hooks"
 
       - name: Extract version from tag
         id: version
