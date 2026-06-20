@@ -8,13 +8,23 @@ ZLS_BIN_DIR="${HOME}/.local/bin"
 # ANSI color codes (disabled if not a terminal)
 if [[ -t 2 ]]; then
     RED='\033[0;31m'
+    YELLOW='\033[0;33m'
     BOLD='\033[1m'
     RESET='\033[0m'
 else
     RED=''
+    YELLOW=''
     BOLD=''
     RESET=''
 fi
+
+# ZLS releases are signed with minisign. This public key is taken from the
+# official install docs (https://zigtools.org/zls/install/) and pinned here on
+# purpose: verifying against a key fetched at runtime from the same source as
+# the binary would provide no real protection. A compromised release or CDN
+# cannot produce an archive that verifies against this key without ZLS's
+# private key.
+ZLS_MINISIGN_PUBKEY="RWR+9B91GBZ0zOjh6Lr17+zKf5BoSuFvrx2xSeDE57uIYvnKBGmMjOex"
 
 # ─────────────────────────────────────────────────────────────
 # Detect Zig version (project-aware)
@@ -78,33 +88,41 @@ is_zls_installed() {
 }
 
 # ─────────────────────────────────────────────────────────────
-# Verify SHA256 checksum
+# Verify a downloaded archive against its minisign signature.
+#
+# Returns 0 when the signature verifies OR when verification has to be
+# skipped (minisign tool absent, or no signature published for the release);
+# returns 1 only when a signature IS present but FAILS to verify, which is
+# treated as tampering. The skip cases warn loudly so the user is never under
+# the illusion that an unverified download was checked.
 # ─────────────────────────────────────────────────────────────
-verify_checksum() {
-    local file="$1"
-    local expected_hash="$2"
-    local actual_hash
+verify_signature() {
+    local archive="$1"
+    local sig="$2"
 
-    # Use shasum on macOS, sha256sum on Linux
-    if command -v shasum &>/dev/null; then
-        actual_hash=$(shasum -a 256 "${file}" | awk '{print $1}')
-    elif command -v sha256sum &>/dev/null; then
-        actual_hash=$(sha256sum "${file}" | awk '{print $1}')
-    else
-        echo "Warning: No SHA256 tool found, skipping verification"
+    if ! command -v minisign &>/dev/null; then
+        echo -e "${YELLOW}${BOLD}[WARNING] minisign not found - cannot verify download${RESET}" >&2
+        echo -e "${YELLOW}  Install it to enable signature verification:${RESET}" >&2
+        echo -e "${YELLOW}    macOS: brew install minisign${RESET}" >&2
+        echo -e "${YELLOW}    Linux: apt install minisign (or your package manager)${RESET}" >&2
+        echo -e "${YELLOW}  Proceeding WITHOUT verification.${RESET}" >&2
         return 0
     fi
 
-    if [[ "${actual_hash}" == "${expected_hash}" ]]; then
-        echo "Checksum verified: ${actual_hash:0:16}..."
+    if [[ ! -f "${sig}" ]]; then
+        echo -e "${YELLOW}[WARNING] No signature published for this release - skipping verification${RESET}" >&2
         return 0
-    else
-        echo -e "${RED}${BOLD}[SECURITY] CHECKSUM VERIFICATION FAILED${RESET}" >&2
-        echo -e "${RED}  Expected: ${expected_hash}${RESET}" >&2
-        echo -e "${RED}  Got:      ${actual_hash}${RESET}" >&2
-        echo -e "${RED}  File may be corrupted or tampered with.${RESET}" >&2
-        return 1
     fi
+
+    if minisign -Vm "${archive}" -x "${sig}" -P "${ZLS_MINISIGN_PUBKEY}" >/dev/null 2>&1; then
+        echo "Signature verified (minisign)"
+        return 0
+    fi
+
+    echo -e "${RED}${BOLD}[SECURITY] SIGNATURE VERIFICATION FAILED${RESET}" >&2
+    echo -e "${RED}  ${archive##*/} does not match its minisign signature.${RESET}" >&2
+    echo -e "${RED}  File may be corrupted or tampered with.${RESET}" >&2
+    return 1
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -169,10 +187,10 @@ install_zls() {
     esac
 
     local archive_name="zls-${arch}-${platform}.tar.xz"
-    local checksum_name="${archive_name}.sha256"
+    local sig_name="${archive_name}.minisig"
     local base_url="https://github.com/zigtools/zls/releases/download/${version}"
     local download_url="${base_url}/${archive_name}"
-    local checksum_url="${base_url}/${checksum_name}"
+    local sig_url="${base_url}/${sig_name}"
     local install_dir="${ZLS_BASE_DIR}/${version}"
 
     echo "Downloading ZLS ${version} for ${platform}-${arch}..."
@@ -190,18 +208,16 @@ install_zls() {
         return 1
     fi
 
-    # Download and verify checksum
-    local expected_hash
-    if curl -fsSL "${checksum_url}" -o "${temp_dir}/${checksum_name}" 2>/dev/null; then
-        expected_hash=$(awk '{print $1}' "${temp_dir}/${checksum_name}")
-        if ! verify_checksum "${temp_dir}/${archive_name}" "${expected_hash}"; then
-            echo -e "${RED}${BOLD}[SECURITY] REFUSING TO INSTALL - CHECKSUM MISMATCH${RESET}" >&2
-            echo -e "${RED}Download may have been intercepted or corrupted.${RESET}" >&2
-            echo -e "${RED}If this persists, verify your network connection and try again.${RESET}" >&2
-            return 1
-        fi
-    else
-        echo "Warning: Checksum file not available, proceeding without verification"
+    # Download the minisign signature (best-effort) and verify the archive.
+    # A failed verification means the bytes don't match ZLS's signature, so we
+    # refuse to install rather than run a possibly-tampered binary.
+    curl -fsSL "${sig_url}" -o "${temp_dir}/${sig_name}" 2>/dev/null || true
+    if ! verify_signature "${temp_dir}/${archive_name}" "${temp_dir}/${sig_name}"; then
+        echo -e "${RED}${BOLD}[SECURITY] REFUSING TO INSTALL - SIGNATURE MISMATCH${RESET}" >&2
+        echo -e "${RED}Download may have been intercepted or corrupted.${RESET}" >&2
+        echo -e "${RED}If this persists, verify your network connection and try again.${RESET}" >&2
+        rmdir "${install_dir}" 2>/dev/null || true
+        return 1
     fi
 
     # Extract and install

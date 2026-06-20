@@ -6,16 +6,21 @@
 - MINOR: new ZLS options
 - PATCH: bug fixes
 
-## Compatibility Matrix
+## Compatibility
 
-| Plugin | ZLS | Zig |
-|--------|-----|-----|
-| 1.0.x | 0.13+ | 0.13.x |
-| 1.1.x | 0.14+ | 0.14.x |
+The plugin is **version-agnostic** by design: at session start it detects the
+project's Zig version and installs the matching ZLS release on demand. There is
+no static mapping from a plugin version to a specific Zig release.
+
+| Component | Supported |
+|-----------|-----------|
+| Zig | any release with a corresponding ZLS tag (`0.9.0` – `0.16.0` at time of writing) |
+| ZLS | resolved automatically to the exact Zig version, or the highest `major.minor` match when ZLS lags behind a Zig release |
 
 ## Constraint
 
-ZLS must match Zig version. No bundled binary - user installs.
+ZLS must match the Zig `major.minor`. No binary is bundled — the hook downloads
+ZLS from the official releases on demand.
 
 ## Version Sources
 

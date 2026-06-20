@@ -45,8 +45,7 @@
 
 ```json
 {
-  "enable_snippets": true,
-  "enable_import_analysis": true
+  "enable_snippets": true
 }
 ```
 

@@ -7,7 +7,7 @@ Zig LSP plugin for [Claude Code](https://claude.ai/code). Integrates [ZLS](https
 - **Auto-install**: Downloads ZLS automatically if not present
 - **Project-aware**: Matches ZLS version to your project's Zig version
 - **Multi-version**: Caches multiple ZLS versions for different projects
-- **Secure**: [SHA256 checksum verification](https://github.com/4rgon4ut/cc-zig-lsp/blob/main/hooks/check-zls.sh#L160-L172) on downloads
+- **Verified**: downloads are checked against ZLS's official [minisign](https://jedisct1.github.io/minisign/) signature before install (install `minisign` to enable)
 
 ## Installation
 
@@ -19,6 +19,7 @@ claude plugin marketplace add 4rgon4ut/cc-zig-lsp && claude plugin install zig-l
 
 - [Zig](https://ziglang.org/download/) installed and in PATH
 - ZLS will be auto-installed, or you can install it manually
+- *(Optional)* [minisign](https://jedisct1.github.io/minisign/) — used to verify download signatures (`brew install minisign` / `apt install minisign`)
 
 ## How It Works
 
