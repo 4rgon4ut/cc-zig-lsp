@@ -1,7 +1,7 @@
 {
   "name": "zig-lsp",
   "description": "Zig language support via ZLS (auto-installs)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "4rgon4ut"
   },
